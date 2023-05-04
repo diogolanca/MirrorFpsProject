@@ -8,6 +8,11 @@ public class CameraLook : MonoBehaviour
     float xRotation = 0f;
     [SerializeField] private float xSens = 200f, ySens = 200f;
 
+    private void Start()
+    {
+        Cursor.lockState = CursorLockMode.Locked;    
+    }
+
     void Update()
     {
         float xAngle = Input.GetAxis("Mouse Y") * ySens * Time.deltaTime;
