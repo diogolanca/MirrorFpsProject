@@ -1,4 +1,5 @@
 using Mirror;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
@@ -14,12 +15,33 @@ public class HealthScript : NetworkBehaviour
     [SerializeField] private GameObject mainFPSCamera = null, AfterDeathCamera = null, TPModelMesh = null;
     [SerializeField] private Movement movementScript = null;
     [SerializeField] private CharacterController controller = null;
+    [SerializeField] private GameObject RoundOverPanel = null;
+    [SerializeField] private TMP_Text WinnerTxt = null;
+    Vector3 startPosition;
 
     private void Start()
     {
         if (!isLocalPlayer) return;
+        startPosition = transform.position;
         HealthText.text = HealthValue.ToString();
         HealthBar.value = HealthValue;
+    }
+
+    public void NewRoundCall()
+    {
+        CmdMaxHealth();
+    }
+
+    [Command]
+    private void CmdMaxHealth()
+    {
+        ServerMaxHealth();
+    }
+
+    [Server]
+    private void ServerMaxHealth()
+    {
+        HealthValue = 100;
     }
 
     [Server]
@@ -37,15 +59,34 @@ public class HealthScript : NetworkBehaviour
 
         if (newHealth <= 0)
         {
+            movementScript.enabled = false;
+            controller.enabled = false;
             print("die");
+            RoundOverPanel.SetActive(true);
+            WinnerTxt.text = "You Lost";
             AfterDeathCamera.SetActive(true);
             mainFPSCamera.SetActive(false);
             TPModelMesh.SetActive(true);
-            movementScript.enabled = false;
-            controller.enabled = false;
+            TpAnimator.SetBool("Walking", false);
             TpAnimator.SetBool("Die", true);
-            TpAnimator.SetBool("Walking", true);
+            Invoke(nameof(BeginNewRound), 5f);
         }
+    }
+
+    public void BeginNewRound()
+    {
+        RoundOverPanel.SetActive(false);
+        NewRoundCall();
+        movementScript.enabled = false;
+        controller.enabled = false;
+        transform.position = startPosition;
+        AfterDeathCamera.SetActive(false);
+        mainFPSCamera.SetActive(true);
+        TPModelMesh.SetActive(false);
+        TpAnimator.SetBool("Walking", false);
+        TpAnimator.SetBool("Die", false);
+        movementScript.enabled = true;
+        controller.enabled = true;
     }
 
     public float GetHealth()

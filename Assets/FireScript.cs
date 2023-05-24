@@ -1,13 +1,18 @@
 using Mirror;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 
 public class FireScript : NetworkBehaviour
 {
-    [SerializeField] private GameObject camera = null;
+    [SerializeField] private GameObject cam = null;
     [SerializeField] private LayerMask playerMask = new LayerMask();
     [SerializeField] private GameObject DamageTextParent = null;
+    [SerializeField] private HealthScript healthScript;
+    [SerializeField] private GameObject RoundOverPanel = null;
+    [SerializeField] private TMP_Text WinnerTxt = null;
     float lastShootTime = 0f;
     float waitForSecondsBetweenShoots = 0.2f;
 
@@ -28,13 +33,20 @@ public class FireScript : NetworkBehaviour
             {
                 lastShootTime = Time.time;
 
-                if (Physics.Raycast(camera.transform.position, camera.transform.forward, out RaycastHit hit, playerMask))
+                if (Physics.Raycast(cam.transform.position, cam.transform.forward, out RaycastHit hit, playerMask))
                 {
                     if (hit.collider.TryGetComponent<HealthScript>(out HealthScript playerHealthScript))
                     {
+                        if (playerHealthScript.GetHealth() - 25 <= 0) 
+                        {
+                            RoundOverPanel.SetActive(true);
+                            WinnerTxt.text = "You Won!";
+                            RoundOver();
+                        }
+
                         if (playerHealthScript.GetHealth() <= 0f) return;
                         GameObject newDamageTxtParent = Instantiate(DamageTextParent, hit.point, Quaternion.identity);
-                        newDamageTxtParent.GetComponentInChildren<DamageText>().GetCalled(25, camera);
+                        newDamageTxtParent.GetComponentInChildren<DamageText>().GetCalled(25, cam);
 
                         if (isServer)
                         {
@@ -59,5 +71,15 @@ public class FireScript : NetworkBehaviour
     private void ServerHit(float damage, HealthScript playerHealthScript)
     {
         playerHealthScript.GetDamage(damage);
+    }
+
+    private void RoundOver()
+    {
+        Invoke(nameof(BeginNewRound), 5f);
+    }
+
+    private void BeginNewRound()
+    {
+        healthScript.BeginNewRound();
     }
 }
